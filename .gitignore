@@ -1,0 +1,25 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer
+# Local development, signing and debug artifacts
+/work/
+/outputs/
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+*.p7b
+*.keystore
+*.hap
+*.app
+*.log

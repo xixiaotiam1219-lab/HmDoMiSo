@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "DoMiSo 曲谱与原神琴演奏"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "HmDoMiSo"
+    },
+    {
+      "name": "background_reason",
+      "value": "演奏时保持与本机调试服务的数据通信"
+    },
+    {
+      "name": "floating_ball_reason",
+      "value": "通过系统悬浮球快捷播放或暂停曲谱"
+    }
+  ]
+}
