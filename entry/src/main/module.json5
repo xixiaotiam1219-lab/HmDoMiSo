@@ -27,7 +27,9 @@
             "actions": ["ohos.want.action.viewData"],
             "uris": [
               {"scheme":"file","type":"text/plain","linkFeature":"FileOpen","maxFileSupported":1},
-              {"scheme":"file","type":"general.plain-text","utd":"general.plain-text","linkFeature":"FileOpen","maxFileSupported":1}
+              {"scheme":"file","type":"general.plain-text","utd":"general.plain-text","linkFeature":"FileOpen","maxFileSupported":1},
+              {"scheme":"file","type":"cn.xxtstudio.GenshinDoMiSo.dms","utd":"cn.xxtstudio.GenshinDoMiSo.dms","linkFeature":"FileOpen","maxFileSupported":1},
+              {"scheme":"file","type":"application/x-domiso","linkFeature":"FileOpen","maxFileSupported":1}
             ]
           },
           {

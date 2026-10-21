@@ -17,7 +17,7 @@ import { PlaybackBall } from '../core/PlaybackBall';
 import { StartDelayDialog } from '../components/StartDelayDialog';
 import { SpeedDialog } from '../components/SpeedDialog';
 import { LicenseDialog } from '../components/LicenseDialog';
-import { ScoreParser, ScoreResult, keyName } from '../core/Score';
+import { ScoreParser, ScoreResult, keyName, scoreToCKey } from '../core/Score';
 import { CalibrationProfile, PixelPoint, ImageFit, resetCalibration, recalculate, validateCalibration } from '../core/Calibration';
 
 class LibraryEntry { id: string = ''; title: string = ''; text: string = ''; }
@@ -44,6 +44,7 @@ struct Index {
   @State noteCount: number = 0;
   @State tempo: string = '88';
   @State checked: boolean = false;
+  @State canTranspose: boolean = false;
   @State backgroundEnabled: boolean = true;
   @State mediaEnabled: boolean = true;
   @State backgroundStatus: string = '按需开启';
@@ -182,12 +183,12 @@ struct Index {
     finally { this.busy=false; }
   }
   private check(): void {
-    this.checked=false; this.duration=0; this.noteCount=0; this.tempo='—'; this.parsed=new ScoreResult();
+    this.checked=false; this.canTranspose=false; this.duration=0; this.noteCount=0; this.tempo='—'; this.parsed=new ScoreResult();
     try {
       this.parsed=new ScoreParser().parse(this.scoreText); this.checked=this.parsed.errors.length===0; this.noteCount=this.parsed.events.length; this.duration=this.parsed.duration; this.tempo=this.parsed.bpms.join('/') || '—';
-      this.report=`${this.parsed.events.length}个音符 · ${this.parsed.groups.length}组起音 · ${this.parsed.voices}声部\n`+
-        `${(this.parsed.duration/1000).toFixed(3)}秒 · BPM ${this.parsed.bpms.join('/')} · MIDI ${this.parsed.low}–${this.parsed.high}\n`+
-        (this.parsed.errors.length ? this.parsed.errors.join('\n') : '校验通过')+
+      this.canTranspose=this.parsed.unsupportedPitches.length>0 && scoreToCKey(this.scoreText)!==this.scoreText.replace(/\r\n/g,'\n');
+      this.report=(this.parsed.errors.length ? this.parsed.errors.slice(0,6).join('\n') : '校验通过')+
+        (this.parsed.errors.length>6 ? `\n另有${this.parsed.errors.length-6}项问题，请先修改后重新检查` : '')+
         (this.parsed.warnings.length ? '\n'+this.parsed.warnings.join('\n') : '');
     } catch (e) { this.report=(e as Error).message; }
     if (!this.playing && !this.preparing) { this.playbackDuration=this.duration; this.elapsed=0; }
@@ -196,7 +197,7 @@ struct Index {
   private async importText(): Promise<void> {
     try {
       const ctx=this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const paths=await new picker.DocumentViewPicker(ctx).select({maxSelectNumber:1,fileSuffixFilters:['文本曲谱|.txt']});
+      const paths=await new picker.DocumentViewPicker(ctx).select({maxSelectNumber:1,fileSuffixFilters:['DoMiSo 曲谱|.txt,.dms']});
       if (!paths.length) { return; }
       const imported=await readScoreFile(paths[0]);
       await this.stopPlayback(false); this.scoreText=imported.text; this.title=imported.title; this.check(); this.notice='曲谱已导入';
@@ -209,7 +210,7 @@ struct Index {
     await this.stopPlayback(false);
     this.scoreText=request.text; this.title=request.title; this.editing=true; this.check();
     this.tab=1; this.tabsController.changeIndex(0); this.preserveMiniBar();
-    this.notice=this.checked?'TXT曲谱已打开，检查通过':'TXT已打开，请检查曲谱格式';
+    this.notice=this.checked?'曲谱已打开，检查通过':'文件已打开，请检查曲谱格式';
   }
   private syncBall(): void {
     this.ball.setPlayback(this.playing,this.paused,this.preparing,(this.playing || this.preparing)?this.activeTitle:this.title);
@@ -559,7 +560,7 @@ struct Index {
         }.width('100%')
       }.padding(22).width('100%').alignItems(HorizontalAlign.Start).borderRadius(28).backgroundColor($r('app.color.card_bg'))
       Row({space:10}) {
-        Button('导入TXT').layoutWeight(1).height(44).fontSize(14).fontColor($r('app.color.text_primary')).backgroundColor($r('app.color.card_bg')).onClick(() => { this.importText(); })
+        Button('导入曲谱').id('ImportScore').layoutWeight(1).height(44).fontSize(14).fontColor($r('app.color.text_primary')).backgroundColor($r('app.color.card_bg')).onClick(() => { this.importText(); })
         Row() {
           PasteButton({icon:PasteIconStyle.LINES,text:PasteDescription.PASTE,buttonType:ButtonType.Capsule})
             .width('100%').height(44).fontSize(16).iconSize(18)
@@ -577,7 +578,11 @@ struct Index {
             Button('检查').layoutWeight(1).height(40).fontColor($r('app.color.accent')).backgroundColor($r('app.color.accent_soft')).onClick(() => { this.check(); })
             Button('保存').layoutWeight(1).height(40).fontColor($r('app.color.on_accent')).backgroundColor($r('app.color.accent')).onClick(() => { this.saveScore(); })
           }
-          if (!this.checked || this.parsed.warnings.length>0) { Text(this.report).fontSize(12).fontColor($r('app.color.text_secondary')).width('100%'); }
+          if (this.canTranspose) {
+            Button('转为 C 调').id('TransposeScoreC').width('100%').height(40).fontColor($r('app.color.accent')).backgroundColor($r('app.color.accent_soft'))
+              .onClick(() => { this.scoreText=scoreToCKey(this.scoreText); this.check(); this.notice='已按谱面音级转为C调'; })
+          }
+          if (!this.checked || this.parsed.warnings.length>0) { Text(this.report).id('ParseReport').fontSize(12).fontColor($r('app.color.text_secondary')).width('100%'); }
         }.width('100%').padding(18).borderRadius(28).backgroundColor($r('app.color.card_bg'))
       }
       this.sectionTitle('我的曲库')

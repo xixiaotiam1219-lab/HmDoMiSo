@@ -1,4 +1,4 @@
-/** Strict DoMiSo text parser. Timing matches the reference AHK 0.01 ms beat rounding. */
+/** DoMiSo text parser. Timing matches the reference AHK 0.01 ms beat rounding. */
 export class NoteEvent {
   pitch: number = 60;
   start: number = 0;
@@ -13,6 +13,7 @@ export class TouchGroup {
 export class ParsedNote {
   pitch: number = 0;
   beats: number = 1;
+  arpeggio: boolean = false;
 }
 export class ScoreResult {
   events: NoteEvent[] = [];
@@ -24,6 +25,7 @@ export class ScoreResult {
   bpms: number[] = [];
   low: number = 128;
   high: number = 0;
+  unsupportedPitches: number[] = [];
 }
 const STEPS: number[] = [0, 2, 4, 5, 7, 9, 11];
 export function keyIndex(pitch: number): number {
@@ -49,6 +51,17 @@ export function noteLength(suffix: string, base: number = 1): number {
   }
   return value;
 }
+/** Transpose written scale degrees to C, preserving octave numbers and source comments. */
+export function scoreToCKey(text: string): string {
+  const lines = text.split(/\r?\n/);
+  let body = 0;
+  for (let i = 0; i < lines.length; i++) { if (lines[i].indexOf('======') >= 0) { body = i + 1; break; } }
+  for (let i = body; i < lines.length; i++) {
+    lines[i] = lines[i].replace(/(^|\s)1=[A-G](\d{1,2})?#?(?=\s|$)/g,
+      (match: string, prefix: string, octave: string) => prefix + '1=C' + (octave || ''));
+  }
+  return lines.join('\n');
+}
 export class ScoreParser {
   private result: ScoreResult = new ScoreResult();
   private cursor: number = 0;
@@ -57,42 +70,73 @@ export class ScoreParser {
   private base: number = 60;
   private voice: number = 0;
   private line: number = 0;
-  private emit(notes: ParsedNote[], beats: number): void {
-    const ms = beats * this.beatMs;
-    if (!Number.isFinite(ms) || ms < 1) { this.error('时值必须至少为1毫秒'); return; }
+  private previousStart: number = -1;
+  private arpeggioDelay: number = 0;
+  private emit(notes: ParsedNote[], beats: number, arpeggio: boolean = false): void {
+    if (arpeggio && this.previousStart < 0) { this.error('琶音前需要有起始音符或组'); return; }
+    // The reference offsets each ~ onset by 40 ms, shortening its own written duration.
+    const delay = arpeggio ? this.arpeggioDelay + 40 : 0;
+    const start = arpeggio ? this.previousStart + 40 : this.cursor;
+    const ms = beats * this.beatMs - delay;
+    if (!Number.isFinite(ms) || ms < 1) {
+      this.error(arpeggio ? '琶音时值不足以容纳累计40毫秒起音间隔' : '时值必须至少为1毫秒'); return;
+    }
     if (this.result.events.length + notes.length > 100000) { throw new Error('曲谱超过十万音符上限'); }
     for (const note of notes) {
       if (note.pitch === 0) { continue; }
       const event = new NoteEvent();
-      event.pitch = note.pitch; event.start = this.cursor; event.end = this.cursor + ms;
+      event.pitch = note.pitch; event.start = start; event.end = start + ms;
       event.voice = this.voice; event.line = this.line;
       this.result.events.push(event);
       this.result.low = Math.min(this.result.low, event.pitch); this.result.high = Math.max(this.result.high, event.pitch);
-      if (keyIndex(event.pitch) < 0) { this.error(`音高 MIDI ${event.pitch} 不在21键自然音范围内`); }
+      if (keyIndex(event.pitch) < 0 && this.result.unsupportedPitches.indexOf(event.pitch) < 0) {
+        this.result.unsupportedPitches.push(event.pitch);
+      }
     }
-    this.cursor += ms; this.result.duration = Math.max(this.result.duration, this.cursor);
+    // A completed chord is a fresh anchor; a tuplet anchors at its final member.
+    this.previousStart = start; this.arpeggioDelay = delay;
+    this.cursor = start + ms; this.result.duration = Math.max(this.result.duration, this.cursor);
     if (this.result.bpms.indexOf(this.bpm) < 0) { this.result.bpms.push(this.bpm); }
   }
   private error(message: string): void { if (this.result.errors.length < 100) { this.result.errors.push(`第${this.line}行：${message}`); } }
   private note(token: string): ParsedNote | undefined {
-    const m = /^(-*|\+*)([0-7])([#bB]?)([\/.-]*)$/.exec(token);
+    const m = /^(~?)(-*|\+*)([0-7])([#bB]?)([\/.-]*)$/.exec(token);
     if (!m) { return undefined; }
-    const n = new ParsedNote(); n.beats = noteLength(m[4]);
-    if (m[2] === '0') { if (m[1] || m[3]) { this.error('休止不能带八度或半音'); } return n; }
-    n.pitch = this.base + STEPS[Number(m[2]) - 1] + (m[1][0] === '+' ? 12 : -12) * m[1].length;
-    n.pitch += m[3] === '#' ? 1 : m[3] ? -1 : 0;
+    const n = new ParsedNote(); n.beats = noteLength(m[5]); n.arpeggio = m[1] === '~';
+    if (m[3] === '0') { if (m[2] || m[4]) { this.error('休止不能带八度或半音'); } return n; }
+    n.pitch = this.base + STEPS[Number(m[3]) - 1] + (m[2][0] === '+' ? 12 : -12) * m[2].length;
+    n.pitch += m[4] === '#' ? 1 : m[4] ? -1 : 0;
     return n;
   }
   parse(text: string): ScoreResult {
     this.result = new ScoreResult(); this.cursor = 0; this.beatMs = 750; this.bpm = 80; this.base = 60; this.voice = 0;
+    this.previousStart = -1; this.arpeggioDelay = 0; this.line = 0;
     if (text.length > 2000000) { this.result.errors.push('曲谱超过2MB上限'); return this.result; }
     const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
     let split = -1;
     for (let i = 0; i < lines.length; i++) { if (lines[i].indexOf('======') >= 0) { split = i; break; } }
     const labels = ['右手', '左手', '旋律', '伴奏', '主旋律', '低音', '重复', 'melody', 'bass', 'right', 'left', 'repeat'];
+    let lyricLines = 0;
     for (let i = split + 1; i < lines.length; i++) {
       this.line = i + 1;
-      const tokens = lines[i].trim().split(/\s+/).filter((t: string) => t.length > 0);
+      const trimmed = lines[i].trim();
+      if (/^[-_=]{3,}$/.test(trimmed)) { continue; }
+      // Only whole Chinese text lines are lyrics; mixed or malformed music still reports errors.
+      if (trimmed && /^[\u3400-\u9FFF\s\u3000-\u303F\uFF00-\uFF65，。！？、：；“”‘’…·—,.!?;:()]+$/.test(trimmed)) {
+        if (labels.indexOf(trimmed.toLowerCase()) < 0) { lyricLines++; }
+        continue;
+      }
+      // Keep closing-bracket length suffixes intact while accepting compact formatting.
+      const rawTokens = lines[i].replace(/_/g, ' ').replace(/([({|])/g, ' $1 ')
+        .replace(/([)}][\/.-]*)/g, ' $1 ').trim().split(/\s+/).filter((t: string) => t.length > 0)
+        .map((t: string) => /^bpm\d+$/i.test(t) ? t.replace(/^bpm/i, 'bpm=') : t);
+      const tokens: string[] = [];
+      for (const token of rawTokens) {
+        if (/^[\/.-]+$/.test(token) && tokens.length > 0 &&
+          /^(~?(-*|\+*)[0-7][#bB]?[\/.-]*|[)}][\/.-]*)$/.test(tokens[tokens.length - 1])) {
+          tokens[tokens.length - 1] += token;
+        } else { tokens.push(token); }
+      }
       for (const prefix of ['bpm=', '1=', 'rollback=']) {
         const commands = tokens.filter((t: string) => t.toLowerCase().startsWith(prefix));
         if (commands.length > 1) { this.error(`一行只能有一个${prefix}命令`); }
@@ -107,7 +151,10 @@ export class ScoreParser {
           else { this.base = Number(k[2] || '5') * 12 + STEPS['CDEFGAB'.indexOf(k[1])] + (k[3] ? 1 : 0); }
         } else {
           if (!/^\d+(\.\d*)?$/.test(value)) { this.error('rollback应为非负拍数'); }
-          else { this.cursor = Math.max(0, this.cursor - Number(value) * this.beatMs); this.voice++; }
+          else {
+            this.cursor = Math.max(0, this.cursor - Number(value) * this.beatMs); this.voice++;
+            this.previousStart = -1; this.arpeggioDelay = 0;
+          }
         }
       }
       let group = ''; let members: ParsedNote[] = [];
@@ -130,12 +177,16 @@ export class ScoreParser {
           group = ''; members = []; continue;
         }
         const note = this.note(token);
-        if (!note) { this.error(`无法识别 ${token}；不支持加密DMS、原生~琶音`); }
-        else if (group) { members.push(note); } else { this.emit([note], note.beats); }
+        if (!note) { this.error(`无法识别 ${token}；请检查音符或指令写法`); }
+        else if (group) { members.push(note); } else { this.emit([note], note.beats, note.arpeggio); }
       }
-      if (group) { this.error('组必须在同一行闭合，括号前后留空格'); }
+      if (group) { this.error('组必须在同一行闭合'); }
     }
     this.result.voices = this.voice + 1;
+    if (this.result.unsupportedPitches.length && this.result.errors.length < 100) {
+      this.result.errors.push(`当前调号有${this.result.unsupportedPitches.length}种音高不在21键自然音范围内，请转为C调或调整音域`);
+    }
+    if (lyricLines) { this.result.warnings.push(`已忽略${lyricLines}行歌词或文字说明`); }
     if (!this.result.events.length) { this.error('未找到发声音符'); }
     this.result.events.sort((a: NoteEvent, b: NoteEvent) => a.start - b.start || a.pitch - b.pitch);
     const active = new Map<number, number>(); let overlaps = 0;

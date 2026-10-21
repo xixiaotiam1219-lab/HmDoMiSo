@@ -4,7 +4,7 @@ HmDoMiSo 自有代码采用 [MIT License](LICENSE)。第三方组件仍保留各
 
 | 项目 | 作者/组织 | 许可 | 用途 |
 | --- | --- | --- | --- |
-| [DoMiSo-Universal](https://github.com/Nigh/DoMiSo-Universal) | Nigh，Copyright 2021 | MIT | 文本简谱格式、时值与 MIDI 试听行为的原项目参考 |
+| [DoMiSo-Universal](https://github.com/Nigh/DoMiSo-Universal) | Nigh，Copyright 2021 | MIT | 文本简谱格式、时值、DMS 文件格式与解码算法、MIDI 试听行为的原项目参考 |
 | [hmdriver2](https://github.com/codematrixer/hmdriver2) | matrixer，Copyright 2024 | MIT | 内置 UITest agent 资源与 RPC 接口参考 |
 | [developtools_hdc](https://gitee.com/openharmony/developtools_hdc) | OpenHarmony / Huawei Device Co., Ltd. | Apache-2.0 | HDC daemon 认证、消息帧与 shell 协议参考 |
 

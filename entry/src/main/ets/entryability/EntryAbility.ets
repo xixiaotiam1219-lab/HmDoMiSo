@@ -26,9 +26,9 @@ export default class EntryAbility extends UIAbility {
     const version=++this.incomingVersion;
     let result=new ImportedScore();
     try {
-      if (count>1) { throw new Error('一次只能打开一份TXT曲谱'); }
+      if (count>1) { throw new Error('一次只能打开一份TXT/DMS曲谱'); }
       result=await readScoreFile(uri);
-    } catch (e) { result.error='打开TXT失败：'+(e as Error).message; }
+    } catch (e) { result.error='打开曲谱失败：'+(e as Error).message; }
     if (version!==this.incomingVersion) { return; }
     result.id=Date.now().toString()+'-'+version;
     AppStorage.setOrCreate('externalScoreRequest',JSON.stringify(result));

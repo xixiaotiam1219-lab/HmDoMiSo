@@ -1,0 +1,19 @@
+{
+  "UniformDataTypeDeclarations": [
+    {
+      "TypeId": "cn.xxtstudio.GenshinDoMiSo.dms",
+      "BelongingToTypes": [
+        "general.file",
+        "general.object"
+      ],
+      "FilenameExtensions": [
+        ".dms"
+      ],
+      "MIMETypes": [
+        "application/x-domiso"
+      ],
+      "Description": "DoMiSo score",
+      "ReferenceURL": "https://github.com/Nigh/DoMiSo-Universal"
+    }
+  ]
+}
