@@ -115,9 +115,14 @@ entry/src/main/resources/rawfile/  触摸资源与完整许可
 
 应用使用网络权限连接本机调试服务，并声明连续后台任务与系统悬浮球权限。剪贴板仅在用户点击系统 PasteButton 并获得临时授权后读取。外部 TXT 使用来源应用授予的单文件 URI 读取权限。跨应用触摸依赖用户正常启用并授权的调试链路。
 
-## 协作开发
+## Contributors
 
-本项目由维护者主导，OpenAI Codex 作为 **AI co-builder** 协助实现、调试与编写文档；应用图标使用内置图像生成工具创作。功能取舍与发布由维护者决定。
+| 贡献者 | 角色与贡献 |
+| --- | --- |
+| [@xixiaotiam1219-lab](https://github.com/xixiaotiam1219-lab) | 项目维护者；需求、设计取舍、真机反馈、验收与发布。 |
+| OpenAI Codex | **AI co-builder**；协助代码实现、问题定位、文档编写及应用图标创作。 |
+
+完整贡献说明见 [CONTRIBUTORS.md](CONTRIBUTORS.md)。功能取舍与发布由维护者决定；应用图标使用内置图像生成工具创作。
 
 ## 致谢与许可
 
