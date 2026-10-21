@@ -120,7 +120,7 @@ entry/src/main/resources/rawfile/  触摸资源与完整许可
 | 贡献者 | 角色与贡献 |
 | --- | --- |
 | [@xixiaotiam1219-lab](https://github.com/xixiaotiam1219-lab) | 项目维护者；需求、设计取舍、真机反馈、验收与发布。 |
-| OpenAI Codex | **AI co-builder**；协助代码实现、问题定位、文档编写及应用图标创作。 |
+| [Codex（OpenAI）](https://github.com/codex) | **AI co-builder**；协助代码实现、问题定位、文档编写及应用图标创作。 |
 
 完整贡献说明见 [CONTRIBUTORS.md](CONTRIBUTORS.md)。功能取舍与发布由维护者决定；应用图标使用内置图像生成工具创作。
 

@@ -6,9 +6,17 @@
 
 ## AI co-builder
 
-- **OpenAI Codex**：作为 AI 协作开发工具，协助实现 HarmonyOS / ArkTS 代码、曲谱解析、试听和演奏、系统控制、UI 与交互修复、文档及应用图标创作。
+- **[Codex（OpenAI）](https://github.com/codex)**：作为 AI 协作开发工具，协助实现 HarmonyOS / ArkTS 代码、曲谱解析、试听和演奏、系统控制、UI 与交互修复、文档及应用图标创作。
 
 AI 协作署名用于披露开发过程；项目的决策、验证和发布由维护者负责。
+
+## Git 共同作者署名
+
+本项目由 Codex 协助完成的提交使用以下标准共同作者标记：
+
+```text
+Co-authored-by: Codex <codex@openai.com>
+```
 
 ## 原项目与第三方致谢
 
